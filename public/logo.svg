@@ -1,0 +1,16 @@
+<svg width="320" height="160" viewBox="0 0 320 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="160" rx="12" fill="#0F172A"/>
+  <path d="M80 40H240V120H80V40Z" fill="#1E293B"/>
+  <path d="M100 60H140V100H100V60Z" fill="#FFFFFF"/>
+  <path d="M180 60H220V100H180V60Z" fill="#FFFFFF"/>
+  <path d="M100 60H140V100H100V60Z" stroke="#EF4444" strokeWidth="4"/>
+  <path d="M180 60H220V100H180V60Z" stroke="#3B82F6" strokeWidth="4"/>
+  <path d="M120 80L110 70L120 60" stroke="#EF4444" strokeWidth="4"/>
+  <path d="M120 80L130 70L120 60" stroke="#EF4444" strokeWidth="4"/>
+  <path d="M200 80L190 70L200 60" stroke="#3B82F6" strokeWidth="4"/>
+  <path d="M200 80L210 70L200 60" stroke="#3B82F6" strokeWidth="4"/>
+  <path d="M60 80C60 46.8629 86.8629 20 120 20H200C233.137 20 260 46.8629 260 80C260 113.137 233.137 140 200 140H120C86.8629 140 60 113.137 60 80Z" stroke="#FFFFFF" strokeWidth="4"/>
+  <path d="M80 40L60 20M240 40L260 20M80 120L60 140M240 120L260 140" stroke="#FFFFFF" strokeWidth="4"/>
+  <text x="160" y="140" text-anchor="middle" font-family="Arial" font-weight="bold" font-size="24" fill="white">POKER</text>
+</svg>
+

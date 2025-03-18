@@ -1,0 +1,479 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                Int                  @id @default(autoincrement())
+  telegramId        String               @unique
+  username          String
+  firstName         String?
+  lastName          String?
+  photoUrl          String?
+  languageCode      String?
+  balance           Int                  @default(0)
+  isAdmin           Boolean              @default(false)
+  isActive          Boolean              @default(true)
+  lastActive        DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  transactions      Transaction[]
+  securityLogs      SecurityLog[]
+  bannedUser        BannedUser?
+  gamePreferences   UserGamePreferences?
+  playerStatistics  PlayerStatistics?
+  achievements      UserAchievement[]
+  sentFriendRequests     FriendRequest[]      @relation("SentFriendRequests")
+  receivedFriendRequests FriendRequest[]      @relation("ReceivedFriendRequests")
+  tournamentRegistrations TournamentRegistration[]
+  chatMessages      ChatMessage[]
+  spectatorSessions SpectatorSession[]
+  notifications   Notification[]
+  vipStatus       VipStatus?
+  referralProfile ReferralProfile?
+  referrerReferrals Referral[] @relation("ReferrerRelation")
+  referredReferrals Referral[] @relation("ReferredRelation")
+  consecutiveLoginDays Int?
+  lastLoginAt          DateTime?
+  userBonuses          UserBonus[]
+}
+
+model Transaction {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  type        String    // deposit, withdraw, game_win, game_loss, tournament_entry, etc.
+  amount      Int
+  status      String    // pending, completed, failed, cancelled
+  reference   String?   // external reference or transaction ID
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SecurityLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  action    String   // login, logout, password_change, etc.
+  ipAddress String?
+  userAgent String?
+  details   String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model BannedUser {
+  id        Int       @id @default(autoincrement())
+  userId    Int       @unique
+  reason    String?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model PokerTable {
+  id          String   @id @default(uuid())
+  name        String
+  tableType   String   // cash, tournament
+  gameType    String   // texas_holdem, omaha, etc.
+  smallBlind  Int
+  bigBlind    Int
+  minBuyIn    Int
+  maxBuyIn    Int
+  maxPlayers  Int
+  isPrivate   Boolean  @default(false)
+  password    String?
+  status      String   // active, inactive, full
+  tournamentId String? // If part of a tournament
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  chatMessages ChatMessage[]
+  handHistories HandHistory[]
+  spectatorSessions SpectatorSession[]
+
+  @@index([status])
+  @@index([tableType])
+  @@index([tournamentId])
+}
+
+model ChatMessage {
+  id        Int       @id @default(autoincrement())
+  tableId   String
+  userId    Int
+  message   String
+  isSystem  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  table     PokerTable @relation(fields: [tableId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([tableId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model HandHistory {
+  id            String   @id @default(uuid())
+  tableId       String
+  tournamentId  String?
+  handNumber    Int
+  startTime     DateTime
+  endTime       DateTime?
+  players       Json     // Array of player info
+  actions       Json     // Array of actions
+  communityCards Json?    // Array of community cards
+  results       Json?    // Winners and amounts
+  pot           Int
+  rake          Int      @default(0)
+  table         PokerTable @relation(fields: [tableId], references: [id])
+
+  @@index([tableId])
+  @@index([tournamentId])
+  @@index([startTime])
+}
+
+model SpectatorSession {
+  id        Int       @id @default(autoincrement())
+  tableId   String
+  userId    Int
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+  table     PokerTable @relation(fields: [tableId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@index([tableId])
+  @@index([userId])
+}
+
+model UserGamePreferences {
+  id              Int     @id @default(autoincrement())
+  userId          Int     @unique
+  soundEnabled    Boolean @default(true)
+  soundVolume     Int     @default(70)
+  chatEnabled     Boolean @default(true)
+  showHandHistory Boolean @default(true)
+  showSpectators  Boolean @default(true)
+  autoFoldWhenAway Boolean @default(true)
+  confirmActions  Boolean @default(true)
+  tableBackground String  @default("green")
+  cardStyle       String  @default("classic")
+  user            User    @relation(fields: [userId], references: [id])
+}
+
+model PlayerStatistics {
+  id                  Int      @id @default(autoincrement())
+  userId              Int      @unique
+  gamesPlayed         Int      @default(0)
+  gamesWon            Int      @default(0)
+  totalWinnings       Int      @default(0)
+  totalLosses         Int      @default(0)
+  biggestPot          Int      @default(0)
+  biggestWin          Int      @default(0)
+  handsPlayed         Int      @default(0)
+  handsWon            Int      @default(0)
+  vpip                Float    @default(0) // Voluntarily Put Money In Pot
+  pfr                 Float    @default(0) // Pre-Flop Raise
+  af                  Float    @default(0) // Aggression Factor
+  tournamentsPlayed   Int      @default(0)
+  tournamentsWon      Int      @default(0)
+  tournamentsInMoney  Int      @default(0)
+  bestTournamentFinish Int?
+  totalTournamentWinnings Int   @default(0)
+  rankingPoints       Int      @default(0)
+  rank                String   @default("BEGINNER")
+  lastUpdated         DateTime @default(now())
+  user                User     @relation(fields: [userId], references: [id])
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String
+  icon        String
+  category    String
+  threshold   Int
+  points      Int      @default(10)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            Int        @id @default(autoincrement())
+  userId        Int
+  achievementId String
+  unlockedAt    DateTime   @default(now())
+  progress      Int        @default(0)
+  user          User       @relation(fields: [userId], references: [id])
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+
+  @@unique([userId, achievementId])
+}
+
+model FriendRequest {
+  id         Int      @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  status     String   // PENDING, ACCEPTED, DECLINED, BLOCKED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  sender     User     @relation("SentFriendRequests", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedFriendRequests", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([status])
+}
+
+model Tournament {
+  id                   String   @id @default(uuid())
+  name                 String
+  description          String?
+  startTime            DateTime
+  registrationStartTime DateTime
+  registrationEndTime  DateTime
+  buyIn                Int
+  entryFee             Int
+  startingChips        Int
+  maxPlayers           Int
+  minPlayers           Int
+  blindLevels          Json     // Array of blind levels
+  payoutStructure      Json     // Array of payout percentages
+  lateRegistrationPeriod Int?    // in minutes
+  rebuyOption          Json?    // Rebuy settings
+  addOnOption          Json?    // Add-on settings
+  tableSize            Int
+  isPrivate            Boolean  @default(false)
+  password             String?
+  status               String   // SCHEDULED, REGISTRATION_OPEN, RUNNING, etc.
+  currentLevel         Int      @default(1)
+  nextLevelTime        DateTime?
+  prizes               Json?    // Array of prize distributions
+  winnerId             Int?
+  isFinished           Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  registrations        TournamentRegistration[]
+
+  @@index([status])
+  @@index([startTime])
+  @@index([isFinished])
+}
+
+model TournamentRegistration {
+  id           Int      @id @default(autoincrement())
+  tournamentId String
+  userId       Int
+  chips        Int
+  tableId      String?
+  position     Int?
+  status       String   // REGISTERED, PLAYING, ELIMINATED, etc.
+  registeredAt DateTime @default(now())
+  eliminatedAt DateTime?
+  finalPosition Int?
+  rebuyCount   Int      @default(0)
+  addOnCount   Int      @default(0)
+  tournament   Tournament @relation(fields: [tournamentId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([tournamentId, userId])
+  @@index([tournamentId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Leaderboard {
+  id         Int      @id @default(autoincrement())
+  timeframe  String   // daily, weekly, monthly, allTime
+  category   String   // cashGames, tournaments, overall
+  entries    Json     // Array of leaderboard entries
+  lastUpdated DateTime @default(now())
+
+  @@unique([timeframe, category])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    Int
+  type      String   // friend_request, tournament, achievement, system, transaction
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  actionUrl String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+model VipStatus {
+  id          Int       @id @default(autoincrement())
+  userId      Int       @unique
+  level       Int       @default(1)
+  points      Int       @default(0)
+  nextLevel   Int       @default(100)
+  benefits    Json      // Array of benefits
+  startDate   DateTime  @default(now())
+  expiryDate  DateTime?
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+// Добавляем модели для реферальной системы
+
+model ReferralProfile {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @unique
+  referralCode  String   @unique
+  totalEarnings Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model Referral {
+  id            Int      @id @default(autoincrement())
+  referrerId    Int
+  referredUserId Int
+  earnings      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  referrer      User     @relation("ReferrerRelation", fields: [referrerId], references: [id])
+  referredUser  User     @relation("ReferredRelation", fields: [referredUserId], references: [id])
+
+  @@unique([referrerId, referredUserId])
+  @@index([referrerId])
+  @@index([referredUserId])
+}
+
+// Добавляем модели для промокодов
+
+model PromoCode {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  reward      Int
+  description String?
+  maxUses     Int?
+  usedCount   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  redemptions PromoCodeRedemption[]
+}
+
+model PromoCodeRedemption {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  promoCodeId Int
+  redeemedAt  DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+
+  @@unique([userId, promoCodeId])
+  @@index([userId])
+  @@index([promoCodeId])
+}
+
+// Модель для бонусов
+model Bonus {
+  id             Int         @id @default(autoincrement())
+  title          String
+  description    String
+  type           String      // welcome, deposit, daily, loyalty, special
+  amount         Int
+  requiredAction String?
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  expiresAt      DateTime?
+  userBonuses    UserBonus[]
+}
+
+// Связь между пользователями и бонусами
+model UserBonus {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  bonusId     Int
+  isActive    Boolean  @default(true)
+  progress    Float    @default(0) // Прогресс выполнения условий бонуса (0-100%)
+  isCompleted Boolean  @default(false)
+  activatedAt DateTime @default(now())
+  completedAt DateTime?
+  user        User     @relation(fields: [userId], references: [id])
+  bonus       Bonus    @relation(fields: [bonusId], references: [id])
+
+  @@index([userId])
+  @@index([bonusId])
+}
+
+// Модель для хранения информации о распределении банка
+model PotDistribution {
+  id             String   @id @default(cuid())
+  potAmount      Int
+  rakeAmount     Int
+  treasuryAmount Int
+  jackpotAmount  Int
+  tableId        String
+  handId         String
+  timestamp      DateTime
+
+  @@index([tableId])
+  @@index([handId])
+}
+
+// Модель для хранения информации о Treasury Pool
+model TreasuryPool {
+  id          String   @id @default(cuid())
+  totalAmount Int
+  lastUpdated DateTime
+}
+
+// Модель для хранения информации о джекпоте
+model Jackpot {
+  id          String   @id @default(cuid())
+  amount      Int
+  lastUpdated DateTime
+}
+
+// Модель для хранения информации о выделении средств из Treasury Pool
+model TreasuryAllocation {
+  id          String   @id @default(cuid())
+  amount      Int
+  purpose     String
+  description String
+  timestamp   DateTime
+}
+
+// Модель для хранения информации о выигрышах
+model WinningTransaction {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Int
+  handId    String
+  tableId   String
+  timestamp DateTime
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([handId])
+  @@index([tableId])
+}
+
