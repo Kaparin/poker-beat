@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Отслеживаем доступ к маршрутам
-  return withRouteTracking(() => {
+  return withRouteTracking(async () => {
     // Проверяем, является ли путь публичным
     if (publicPaths.some((path) => pathname.startsWith(path) || pathname === path)) {
       return NextResponse.next()
