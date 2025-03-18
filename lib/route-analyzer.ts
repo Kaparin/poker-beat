@@ -163,8 +163,8 @@ export function getUnusedRoutes(minDays = 30): RouteInfo[] {
  */
 export function getMostUsedRoutes(limit = 10): RouteInfo[] {
   return Object.values(routeStore)
-    .sort((a, b) => b.accessCount - a.accessCount)
-    .slice(0, limit)
+      .sort((a, b) => b.accessCount - a.accessCount)
+      .slice(0, limit)
 }
 
 /**
@@ -174,95 +174,5 @@ export function clearRouteInfo() {
   Object.keys(routeStore).forEach((key) => {
     delete routeStore[key]
   })
-}
-
-```typescriptreact file="app/api/diagnostics/routes/route.ts"
-import { NextRequest, NextResponse } from 'next/server';
-import { scanRoutes, getRouteInfo, getUnusedRoutes, getMostUsedRoutes } from '@/lib/route-analyzer';
-import { createClient } from '@/lib/supabase/server';
-
-// Проверка прав администратора
-async function isAdmin(req: NextRequest) {
-  const supabase = createClient();
-  
-  // Получаем токен из заголовка
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return false;
-  }
-  
-  const token = authHeader.substring(7);
-  
-  // Проверяем токен
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  
-  if (error || !user) {
-    return false;
-  }
-  
-  // Проверяем, является ли пользователь администратором
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  
-  return profile?.role === 'admin';
-}
-
-export async function GET(req: NextRequest) {
-  // Проверяем права администратора
-  const admin = await isAdmin(req);
-  if (!admin) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
-      { status: 403 }
-    );
-  }
-  
-  const searchParams = req.nextUrl.searchParams;
-  const action = searchParams.get('action') || 'info';
-  
-  let responseData: any = {};
-  
-  try {
-    switch (action) {
-      case 'scan':
-        // Сканируем маршруты приложения
-        responseData.routes = await scanRoutes();
-        break;
-        
-      case 'info':
-        // Получаем информацию о всех маршрутах
-        responseData.routes = getRouteInfo();
-        break;
-        
-      case 'unused':
-        // Получаем неиспользуемые маршруты
-        const minDays = parseInt(searchParams.get('minDays') || '30', 10);
-        responseData.routes = getUnusedRoutes(minDays);
-        break;
-        
-      case 'most-used':
-        // Получаем наиболее используемые маршруты
-        const limit = parseInt(searchParams.get('limit') || '10', 10);
-        responseData.routes = getMostUsedRoutes(limit);
-        break;
-        
-      default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
-          { status: 400 }
-        );
-    }
-    
-    return NextResponse.json(responseData);
-  } catch (error) {
-    console.error('Error in route analysis:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
 }
 

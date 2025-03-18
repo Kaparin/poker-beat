@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { jwtVerify } from "jose"
-import { withRouteTracking } from "./lib/route-analyzer"
 
 // Пути, которые не требуют аутентификации
 const publicPaths = ["/", "/login", "/api/auth/telegram", "/api/tables", "/api/admin/auth/login"]
@@ -9,73 +8,69 @@ const publicPaths = ["/", "/login", "/api/auth/telegram", "/api/tables", "/api/a
 // Пути, которые требуют административных прав
 const adminPaths = ["/admin", "/api/admin"]
 
+// Функция middleware
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Отслеживаем доступ к маршрутам
-  return withRouteTracking(async () => {
-    // Проверяем, является ли путь публичным
-    if (publicPaths.some((path) => pathname.startsWith(path) || pathname === path)) {
-      return NextResponse.next()
-    }
+  // Проверяем, является ли путь публичным
+  if (publicPaths.some((path) => pathname.startsWith(path))) {
+    return NextResponse.next()
+  }
 
-    // Получаем токен из заголовка Authorization или из cookie
-    const authHeader = request.headers.get("authorization")
-    const token = authHeader?.split(" ")[1] || request.cookies.get("token")?.value
+  // Проверяем, является ли путь административным
+  const isAdminPath = adminPaths.some((path) => pathname.startsWith(path))
 
-    // Если токен отсутствует, перенаправляем на страницу входа
-    if (!token) {
-      // Если это API-запрос, возвращаем ошибку 401
-      if (pathname.startsWith("/api/")) {
-        return NextResponse.json({ message: "Не авторизован" }, { status: 401 })
-      }
+  // Получаем токен из cookie
+  const token = request.cookies.get("auth_token")?.value
 
-      // Для обычных страниц перенаправляем на страницу входа
-      const url = new URL("/login", request.url)
-      url.searchParams.set("callbackUrl", encodeURI(request.url))
-      return NextResponse.redirect(url)
-    }
+  // Если токена нет, перенаправляем на страницу входа
+  if (!token) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/login"
+    url.searchParams.set("from", pathname)
+    return NextResponse.redirect(url)
+  }
 
-    try {
-      // Проверяем токен
-      const secret = new TextEncoder().encode(process.env.JWT_SECRET)
-      const { payload } = await jwtVerify(token, secret, {
-        audience: process.env.JWT_AUDIENCE,
-        issuer: process.env.JWT_ISSUER,
+  // Проверяем токен
+  try {
+    // Проверяем токен
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET)
+    const { payload } = await jwtVerify(token, secret, {
+      audience: process.env.JWT_AUDIENCE,
+      issuer: process.env.JWT_ISSUER,
+    })
+
+    // Если путь административный, проверяем права администратора
+    if (isAdminPath && !payload.is_admin) {
+      return new NextResponse(JSON.stringify({ success: false, message: "Недостаточно прав" }), {
+        status: 403,
+        headers: { "content-type": "application/json" },
       })
-
-      // Проверяем, имеет ли пользователь доступ к административным путям
-      if (adminPaths.some((path) => pathname.startsWith(path)) && !payload.isAdmin) {
-        // Если это API-запрос, возвращаем ошибку 403
-        if (pathname.startsWith("/api/")) {
-          return NextResponse.json({ message: "Доступ запрещен" }, { status: 403 })
-        }
-
-        // Для обычных страниц перенаправляем на главную страницу
-        return NextResponse.redirect(new URL("/", request.url))
-      }
-
-      // Пользователь авторизован, продолжаем выполнение запроса
-      return NextResponse.next()
-    } catch (error) {
-      // Если токен недействителен, перенаправляем на страницу входа
-      if (pathname.startsWith("/api/")) {
-        return NextResponse.json({ message: "Недействительный токен" }, { status: 401 })
-      }
-
-      const url = new URL("/login", request.url)
-      url.searchParams.set("callbackUrl", encodeURI(request.url))
-      return NextResponse.redirect(url)
     }
-  })(request)
+
+    return NextResponse.next()
+  } catch (error) {
+    console.error("Ошибка проверки токена:", error)
+
+    // В случае ошибки перенаправляем на страницу входа
+    const url = request.nextUrl.clone()
+    url.pathname = "/login"
+    url.searchParams.set("from", pathname)
+    return NextResponse.redirect(url)
+  }
 }
 
+// Конфигурация middleware
 export const config = {
   matcher: [
-    // Защищаем все пути, кроме статических файлов и публичных путей
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-    // Отслеживаем все API маршруты
-    "/api/:path*",
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public (public files)
+     */
+    "/((?!_next/static|_next/image|favicon.ico|public).*)",
   ],
 }
 
