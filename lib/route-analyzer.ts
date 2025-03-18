@@ -1,6 +1,4 @@
 import type { NextRequest } from "next/server"
-import fs from "fs"
-import path from "path"
 
 // Типы для анализа маршрутов
 export type RouteInfo = {
@@ -14,101 +12,6 @@ export type RouteInfo = {
 
 // Хранилище информации о маршрутах
 const routeStore: Record<string, RouteInfo> = {}
-
-/**
- * Сканирование директории app для поиска маршрутов API
- */
-export async function scanRoutes(appDir = "./app"): Promise<RouteInfo[]> {
-  const routes: RouteInfo[] = []
-
-  // Рекурсивная функция для сканирования директорий
-  async function scanDir(dir: string) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true })
-
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name)
-
-      if (entry.isDirectory()) {
-        // Проверяем, является ли директория маршрутом API
-        if (entry.name === "api") {
-          await scanApiDir(fullPath)
-        } else {
-          // Продолжаем сканирование вложенных директорий
-          await scanDir(fullPath)
-        }
-      }
-    }
-  }
-
-  // Сканирование директории API
-  async function scanApiDir(dir: string) {
-    const entries = fs.readdirSync(dir, { withFileTypes: true })
-
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name)
-
-      if (entry.isDirectory()) {
-        // Рекурсивно сканируем вложенные API директории
-        await scanApiDir(fullPath)
-      } else if (entry.name === "route.ts" || entry.name === "route.js") {
-        // Нашли файл маршрута
-        const relativePath = fullPath.replace(/\\/g, "/").replace("./app", "")
-        const apiPath = relativePath.replace(/\/route\.(ts|js)$/, "")
-
-        // Анализируем файл для определения методов
-        const content = fs.readFileSync(fullPath, "utf-8")
-        const methods = extractMethods(content)
-
-        // Определяем middleware
-        const middleware = extractMiddleware(content)
-
-        routes.push({
-          path: apiPath,
-          methods,
-          handler: relativePath,
-          middleware,
-          accessCount: routeStore[apiPath]?.accessCount || 0,
-        })
-
-        // Обновляем хранилище
-        routeStore[apiPath] = routes[routes.length - 1]
-      }
-    }
-  }
-
-  await scanDir(appDir)
-  return routes
-}
-
-/**
- * Извлечение HTTP методов из содержимого файла
- */
-function extractMethods(content: string): string[] {
-  const methods: string[] = []
-  const methodRegex = /export\s+(?:async\s+)?function\s+(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD)\s*\(/g
-
-  let match
-  while ((match = methodRegex.exec(content)) !== null) {
-    methods.push(match[1])
-  }
-
-  return methods
-}
-
-/**
- * Извлечение middleware из содержимого файла
- */
-function extractMiddleware(content: string): string[] {
-  const middleware: string[] = []
-  const middlewareRegex = /with([A-Za-z]+)\(/g
-
-  let match
-  while ((match = middlewareRegex.exec(content)) !== null) {
-    middleware.push(match[1])
-  }
-
-  return middleware
-}
 
 /**
  * Middleware для отслеживания доступа к маршрутам
@@ -174,5 +77,13 @@ export function clearRouteInfo() {
   Object.keys(routeStore).forEach((key) => {
     delete routeStore[key]
   })
+}
+
+/**
+ * Сканирование директории app для поиска маршрутов API
+ * Упрощенная версия для совместимости
+ */
+export async function scanRoutes(): Promise<RouteInfo[]> {
+  return Object.values(routeStore)
 }
 

@@ -1,13 +1,30 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
   "env": {
-    "NEXT_PUBLIC_SOCKET_URL": "https://ваш-домен.vercel.app"
+    "JWT_SECRET": "AWavlJahfUMsYaOOgsJoQULxItcmAeil",
+    "JWT_AUDIENCE": "poker-beat-app",
+    "JWT_ISSUER": "poker-beat-auth",
+    "FRONTEND_URL": "https://your-app.vercel.app",
+    "ENCRYPTION_KEY": "AWavlJahfUMsYaOOgsJoQULxItcmAeil",
+    "NEXT_PUBLIC_SOCKET_URL": "wss://your-websocket-server.onrender.com",
+    "TELEGRAM_BOT_TOKEN": "7712479154:AAEnsiNiPckQbQ4Mw9YbRYndWTHf_FbnNwc",
+    "NEXT_PUBLIC_TELEGRAM_BOT_USERNAME": "your_bot_username",
+    "UPSTASH_REDIS_REST_URL": "https://adequate-labrador-31418.upstash.io",
+    "UPSTASH_REDIS_REST_TOKEN": "AXq6AAIjcDFkNDY4OTAxNmViZjE0N2RhOGNlMjU1NWMyOWJhMWM0MnAxMA",
+    "REDIS_URL": "redis://default:AXq6AAIjcDFkNDY4OTAxNmViZjE0N2RhOGNlMjU1NWMyOWJhMWM0MnAxMA@adequate-labrador-31418.upstash.io:6379",
+    "MAX_DAILY_WITHDRAWAL": "10000000",
+    "MAX_MONTHLY_WITHDRAWAL": "300000000",
+    "NEXT_PUBLIC_TON_TO_CHIPS_RATE": "1000",
+    "TON_TO_CHIPS_RATE": "1000",
+    "ADMIN_EMAILS": "pompario@gmail.com",
+    "EMAIL_NOTIFICATIONS_ENABLED": "false",
+    "SUPABASE_URL": "https://mmrifazjgqxbznkolrif.supabase.co",
+    "SUPABASE_SERVICE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tcmlmYXpqZ3F4Ynpua29scmlmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MTUxMTMyNCwiZXhwIjoyMDU3MDg3MzI0fQ.fQ2fB5AA0x7_QgMzNlsJYCzHa-Y1YXNy6S_JG0DYRZ0",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://mmrifazjgqxbznkolrif.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tcmlmYXpqZ3F4Ynpua29scmlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1MTEzMjQsImV4cCI6MjA1NzA4NzMyNH0.FNl7gf2DdBZIK1mwma2S4V2YpygBZGlxAeNXM8X9ZkQ"
   }
 }
 
